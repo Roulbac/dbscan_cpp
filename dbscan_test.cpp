@@ -1,6 +1,7 @@
 #include <DBSCAN.h>
 
 #include <cstdlib>
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -9,7 +10,7 @@
 #include <algorithm>
 #include <sstream>
 
-std::vector<dbscan::_3DPoint*>* loadMatrixFromCSVFile(std::string);
+std::vector<dbscan::pPointType> loadMatrixFromCSVFile(std::string);
 std::vector<std::string> splitLine(std::string, char);
 
 int main(int argc, char const *argv[]) {
@@ -20,21 +21,34 @@ int main(int argc, char const *argv[]) {
 
     int minPts = std::atoi(argv[3]);
     double eps = std::atof(argv[2]);
-    std::vector<dbscan::_3DPoint*>* points = loadMatrixFromCSVFile(argv[1]);
+    std::vector<dbscan::pPointType> pPoints = loadMatrixFromCSVFile(argv[1]);
 
     std::cout << "minPts: " << minPts << std::endl;
     std::cout << "eps: " << eps << std::endl;
 
-    dbscan::DBSCAN db(eps, minPts, points);
-    db.run();
+    std::clock_t time_req = std::clock();
+    dbscan::DBSCAN db(eps, minPts);
+    db.run(pPoints);
+    time_req = std::clock() - time_req;
+    std::cout << "DBSCAN took " << (float)time_req/CLOCKS_PER_SEC << " seconds" << std::endl;
+
+    for(auto &pPoint: pPoints)
+    {
+        for(auto &coord: pPoint->m_coords)
+        {
+            std::cout << float(coord) << ", ";
+        }
+
+        std::cout << int(pPoint->m_clusterId) << std::endl;
+    }
 
     std::cout << "Done!" << std::endl;
 
     return 0;
 }
 
-std::vector<dbscan::_3DPoint*>* loadMatrixFromCSVFile(std::string file_path) {
-    std::vector<dbscan::_3DPoint*>* mat = nullptr;
+std::vector<dbscan::pPointType> loadMatrixFromCSVFile(std::string file_path) {
+    std::vector<dbscan::pPointType> mat{};
 
     if (file_path != "") {
         std::ifstream inf;
@@ -44,16 +58,16 @@ std::vector<dbscan::_3DPoint*>* loadMatrixFromCSVFile(std::string file_path) {
         inf.open(file_path);
 
         if (inf.is_open()) {
-            mat = new std::vector<dbscan::_3DPoint*>();
             while (getline(inf, line)) {
                 splited = splitLine(line, ',');
-                if (splited.size() == 3) {
-                    mat->push_back(
-                        new dbscan::_3DPoint(
-                            std::stod(splited[0]),
-                            std::stod(splited[1]),
-                            std::stod(splited[2])
-                        )
+                if (splited.size() > 0) {
+                    std::vector<float> coords{};
+                    for(auto &elem : splited)
+                    {
+                        coords.push_back(std::stof(elem));
+                    }
+                    mat.push_back(
+                        dbscan::pPointType(new dbscan::Point(coords))
                     );
                 }
             }

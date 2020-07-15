@@ -1,96 +1,93 @@
 #include <DBSCAN.h>
 
 #include <cmath>
+#include <cassert>
 #include <iostream>
 
 namespace dbscan {
 
-_3DPoint::_3DPoint(double x, double y, double z):
-    m_x(x),
-    m_y(y),
-    m_z(z),
-    m_clusterID(0),
-    m_label(Label::UNCLASSIFIED)
-{}
 
-std::ostream &operator<<(std::ostream &output, const dbscan::_3DPoint& P) {
-    output << "(" << P.m_x << ", " << P.m_y << ", " << P.m_x << " | " << P.m_clusterID << ")";
-    return output;
+
+DBSCAN::DBSCAN(double eps, int minPts):
+    m_eps(eps),
+    m_minPts(minPts)
+{
+
 }
 
-DBSCAN::DBSCAN(double eps, int minPts, std::vector<_3DPoint*>* data):
-    m_eps(eps),
-    m_minPts(minPts),
-    m_data_p(data),
-    m_clusterID(1)
-{}
+void DBSCAN::run(std::vector<pPointType> &pPoints) {
 
-void DBSCAN::run() {
-    std::vector<_3DPoint*>::iterator iter;
-    for (iter = m_data_p->begin(); iter != m_data_p->end(); ++iter) {
+    int clusterId = 1;
+    std::vector<pPointType>::iterator iter;
+    for (iter = pPoints.begin(); iter != pPoints.end(); ++iter) {
         if ((*iter)->m_label == Label::UNCLASSIFIED) {
-            if (expandCluster(*iter)) {
-                m_clusterID++;
+            if (expandCluster(*iter, clusterId, pPoints)) {
+                clusterId++;
             }
         }
     }
 }
 
-bool DBSCAN::expandCluster(_3DPoint* point) {
-    std::vector<_3DPoint*>* neighb = getEpsNeighb(point);
+bool DBSCAN::expandCluster(pPointType &pPoint, int clusterId, std::vector<pPointType> &pPoints) {
+    std::vector<pPointType> neighbPoints = std::move(getEpsNeighb(pPoint, pPoints));
 
-    if (neighb->size() < m_minPts) {
-        point->m_label = Label::NOISE;
+    if (neighbPoints.size() < this->m_minPts) {
+        pPoint->m_label = Label::NOISE;
         return false;
-    } else {
-        std::vector<_3DPoint*>::iterator iter;
-        for (iter = neighb->begin(); iter != neighb->end(); ++iter) {
+    }
+    else {
+        for (auto iter = neighbPoints.begin(); iter != neighbPoints.end(); ++iter) {
             (*iter)->m_label = Label::CORE;
-            (*iter)->m_clusterID = m_clusterID;
+            (*iter)->m_clusterId = clusterId;
         }
 
-        while (!neighb->empty()) {
-            _3DPoint* currentP = neighb->back();
-            std::vector<_3DPoint*>* innerNeighb = getEpsNeighb(currentP);
+        while (!neighbPoints.empty()) {
+            pPointType pCurrentP = neighbPoints.back();
+            std::vector<pPointType> innerNeighb = std::move(getEpsNeighb(pCurrentP, pPoints));
 
-            if (innerNeighb->size() >= m_minPts) {
-                for (iter = innerNeighb->begin(); iter != innerNeighb->end(); ++iter) {
+            if (innerNeighb.size() >= m_minPts) {
+                for (auto iter = innerNeighb.begin(); iter != innerNeighb.end(); ++iter) {
                     if ((*iter)->m_label == Label::UNCLASSIFIED || (*iter)->m_label == Label::NOISE) {
                         if ((*iter)->m_label == Label::UNCLASSIFIED) {
-                            neighb->push_back((*iter));
+                            neighbPoints.push_back((*iter));
                         }
 
                         (*iter)->m_label = Label::CORE;
-                        (*iter)->m_clusterID = m_clusterID;
+                        (*iter)->m_clusterId = clusterId;
                     }
                 }
             }
 
-            neighb->pop_back();
+            neighbPoints.pop_back();
         }
     }
 
     return true;
 }
 
-std::vector<_3DPoint*>* DBSCAN::getEpsNeighb(_3DPoint* point) {
-    std::vector<_3DPoint*>* neighb = new std::vector<_3DPoint*>();
-    std::vector<_3DPoint*>::iterator iter;
-    for (iter = m_data_p->begin(); iter != m_data_p->end(); ++iter) {
-        if (euclideanDist((*iter), point) <= m_eps) {
-            neighb->push_back((*iter));
+std::vector<pPointType> DBSCAN::getEpsNeighb(pPointType &pPoint, std::vector<pPointType> &points)
+{
+    std::vector<pPointType> neighb{};
+    for (auto iter = points.begin(); iter != points.end(); ++iter) {
+        if (euclideanDist((*iter), pPoint) <= m_eps) {
+            neighb.push_back((*iter));
         }
     }
 
     return neighb;
 }
 
-double DBSCAN::euclideanDist(_3DPoint* pa, _3DPoint* pb) {
-    return sqrt(
-        pow((pa->m_x - pb->m_x), 2) +
-        pow((pa->m_y - pb->m_y), 2) +
-        pow((pa->m_z - pb->m_z), 2)
-    );
+double DBSCAN::euclideanDist(pPointType &pPointa, pPointType &pPointb) {
+    assert(pPointa->m_coords.size() == pPointb->m_coords.size());
+    float sum = 0;
+    auto first1 = pPointa->m_coords.begin();
+    auto first2 = pPointb->m_coords.begin();
+    auto last = pPointa->m_coords.end();
+    while(first1 != last)
+    {
+        sum += pow(((*first1++) - (*first2++)), 2);
+    }
+    return sqrt(sum);
 }
 
 } // dbscan namespace

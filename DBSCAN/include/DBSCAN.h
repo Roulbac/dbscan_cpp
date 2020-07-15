@@ -1,6 +1,7 @@
 #ifndef H_DBSCAN_H
 #define H_DBSCAN_H
 
+#include <memory>
 #include <vector>
 #include <ostream>
 
@@ -12,30 +13,35 @@ enum class Label {
     CORE
 };
 
-class _3DPoint {
-public:
-    _3DPoint(double, double, double);
-    friend std::ostream &operator<<(std::ostream &, const dbscan::_3DPoint&);
-
-    double m_x, m_y, m_z;
+struct Point {
+    std::vector<float> m_coords;
     Label m_label;
-    int m_clusterID;
+    int m_clusterId;
+    Point(std::vector<float> &coords) :
+        m_coords(coords),
+        m_clusterId(0),
+        m_label(Label::UNCLASSIFIED)
+    {
+
+    }
+
 };
+
+using pPointType = std::shared_ptr<Point>;
+
 
 class DBSCAN {
 public:
-    DBSCAN(double, int, std::vector<_3DPoint*>*);
-    void run();
+    DBSCAN(double eps, int minPts);
+    void run(std::vector<pPointType> &points);
 
 private:
-    bool expandCluster(_3DPoint*);
-    std::vector<_3DPoint*>* getEpsNeighb(_3DPoint*);
-    double euclideanDist(_3DPoint*, _3DPoint*);
+    bool expandCluster(pPointType &pPoint, int clusterId, std::vector<pPointType> &pPoints);
+    std::vector<pPointType> getEpsNeighb(pPointType &pPoint, std::vector<pPointType> &points);
+    double euclideanDist(pPointType &pPointa, pPointType &pPointb);
 
     double m_eps;
     int m_minPts;
-    int m_clusterID;
-    std::vector<_3DPoint*>* m_data_p;
 };
 
 } // dbscan namespace
