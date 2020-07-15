@@ -16,14 +16,3 @@ set_target_properties(
 target_include_directories(DBSCAN PUBLIC include)
 
 target_link_libraries(DBSCAN ${DBSCAN_LIBRARIES})
-
-install(
-    TARGETS DBSCAN
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-
-install(
-    FILES ${CMAKE_BINARY_DIR}/DBSCAN.pc
-    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig
-)
